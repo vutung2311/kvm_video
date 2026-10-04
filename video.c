@@ -930,6 +930,14 @@ void video_set_encodec_type(RK_CODEC_ID_E type)
     }
 }
 
+void video_request_idr()
+{
+    if (streaming_flag)
+    {
+        RK_MPI_VENC_RequestIDR(VENC_CHANNEL, RK_TRUE);
+    }
+}
+
 void video_set_yolo_enable(int enable)
 {
     if (enable)

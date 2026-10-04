@@ -12,6 +12,7 @@ void video_stop_streaming();
 void video_set_quality_factor(float factor);
 void video_set_encodec_type(RK_CODEC_ID_E type);
 void video_set_yolo_enable(int enable);
+void video_request_idr();
 
 int udp_socket_init(int port);
 int udp_socket_send(const u_int8_t* frame, ssize_t len);

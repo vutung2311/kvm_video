@@ -262,6 +262,14 @@ void *handle_client(void *arg)
                     write_json(ctrl_client_fd, "{seq: %d, result: {edid: %Q}}", seq, edid_hex);
                     free(edid_hex);
                 }
+                else if (strcmp("request_idr", method) == 0)
+                {
+                    video_request_idr();
+                    if (seq > 0)
+                    {
+                        write_json(ctrl_client_fd, "{seq: %d}", seq);
+                    }
+                }
                 free(method);
             }
         }
