@@ -79,8 +79,8 @@ RK_U64 get_us()
 
 double calculate_bitrate(float bitrate_factor, int width, int height)
 {
-    const int32_t base_bitrate_high = 2000;
-    const int32_t base_bitrate_low = 512;
+    const int32_t base_bitrate_high = 4000;
+    const int32_t base_bitrate_low = 1000;
 
     double pixels = (double)width * height;
     double ref_pixels = 1920.0 * 1080.0;
@@ -91,7 +91,7 @@ double calculate_bitrate(float bitrate_factor, int width, int height)
 
     int32_t bitrate = (int32_t)(base_bitrate * scale_factor);
 
-    const int32_t min_bitrate = 100;
+    const int32_t min_bitrate = 250;
     if (bitrate < min_bitrate)
     {
         bitrate = min_bitrate;
@@ -100,24 +100,40 @@ double calculate_bitrate(float bitrate_factor, int width, int height)
     return bitrate;
 }
 
+double detected_fps = 60.0;
+
 static void populate_venc_attr(VENC_CHN_ATTR_S *stAttr, RK_CODEC_ID_E enType, RK_U32 bitrate, RK_U32 max_bitrate, RK_U32 width, RK_U32 height)
 {
     memset(stAttr, 0, sizeof(VENC_CHN_ATTR_S));
 
+    RK_U32 fps = (detected_fps > 5.0 && detected_fps < 240.0) ? (RK_U32)(detected_fps + 0.5) : 60;
 
     if (enType == RK_VIDEO_ID_HEVC)
     {
         stAttr->stRcAttr.enRcMode = VENC_RC_MODE_H265VBR;
         stAttr->stRcAttr.stH265Vbr.u32BitRate = bitrate;
         stAttr->stRcAttr.stH265Vbr.u32MaxBitRate = max_bitrate;
-        stAttr->stRcAttr.stH265Vbr.u32Gop = 60;
+        stAttr->stRcAttr.stH265Vbr.u32MinBitRate = bitrate / 2;
+        stAttr->stRcAttr.stH265Vbr.u32Gop = 30;
+        stAttr->stRcAttr.stH265Vbr.u32StatTime = 1;
+        stAttr->stRcAttr.stH265Vbr.u32SrcFrameRateNum = fps;
+        stAttr->stRcAttr.stH265Vbr.u32SrcFrameRateDen = 1;
+        stAttr->stRcAttr.stH265Vbr.fr32DstFrameRateNum = fps;
+        stAttr->stRcAttr.stH265Vbr.fr32DstFrameRateDen = 1;
+        stAttr->stVencAttr.u32Profile = H265E_PROFILE_MAIN;
     }
     else if (enType == RK_VIDEO_ID_AVC)
     {
         stAttr->stRcAttr.enRcMode = VENC_RC_MODE_H264VBR;
         stAttr->stRcAttr.stH264Vbr.u32BitRate = bitrate;
         stAttr->stRcAttr.stH264Vbr.u32MaxBitRate = max_bitrate;
-        stAttr->stRcAttr.stH264Vbr.u32Gop = 60;
+        stAttr->stRcAttr.stH264Vbr.u32MinBitRate = bitrate / 2;
+        stAttr->stRcAttr.stH264Vbr.u32Gop = 30;
+        stAttr->stRcAttr.stH264Vbr.u32StatTime = 1;
+        stAttr->stRcAttr.stH264Vbr.u32SrcFrameRateNum = fps;
+        stAttr->stRcAttr.stH264Vbr.u32SrcFrameRateDen = 1;
+        stAttr->stRcAttr.stH264Vbr.fr32DstFrameRateNum = fps;
+        stAttr->stRcAttr.stH264Vbr.fr32DstFrameRateDen = 1;
         stAttr->stVencAttr.u32Profile = H264E_PROFILE_MAIN;
     }
  
@@ -355,7 +371,7 @@ static void *venc_read_stream(void *arg)
     while (venc_running)
     {
         // printf("RK_MPI_VENC_GetStream\n");
-        s32Ret = RK_MPI_VENC_GetStream(VENC_CHANNEL, &stFrame, 200); // blocks max 200ms
+        s32Ret = RK_MPI_VENC_GetStream(VENC_CHANNEL, &stFrame, 50); // blocks max 50ms
         if (s32Ret == RK_SUCCESS)
         {
             RK_U64 nowUs = get_us();
@@ -593,14 +609,17 @@ void *run_video_stream(void *arg)
         {
             FD_ZERO(&fds);
             FD_SET(video_dev_fd, &fds);
-            tv.tv_sec = 1;
-            tv.tv_usec = 0;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
 
             r = select(video_dev_fd + 1, &fds, NULL, NULL, &tv);
             if (r == 0)
             {
-                printf("select timeout \n");
-                break;
+                if (!streaming_flag)
+                {
+                    break;
+                }
+                continue;
             }
             if (r == -1)
             {
@@ -873,6 +892,7 @@ void *run_detect_format(void *arg)
                                         (dv_timings.bt.width + dv_timings.bt.hfrontporch + dv_timings.bt.hsync +
                                          dv_timings.bt.hbackporch));
             printf("Frames per second: %.2f fps\n", frames_per_second);
+            detected_fps = frames_per_second;
             detected_width = dv_timings.bt.width;
             detected_height = dv_timings.bt.height;
             detected_signal = true;

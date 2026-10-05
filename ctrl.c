@@ -270,6 +270,27 @@ void *handle_client(void *arg)
                         write_json(ctrl_client_fd, "{seq: %d}", seq);
                     }
                 }
+                else if (strcmp("get_video_rc", method) == 0)
+                {
+                    write_json(ctrl_client_fd,
+                        "{seq: %d, result: {h264: {s32FirstFrameStartQp: 0, u32StepQp: 48, u32MinQp: 48, u32MaxQp: 51, u32MinIQp: 48, u32MaxIQp: 51, s32DeltIpQp: 7, s32MaxReEncodeTimes: 2, u32FrmMaxQp: 51, u32FrmMinQp: 48, u32FrmMinIQp: 51, u32FrmMaxIQp: 48, u32MotionStaticSwitchFrmQp: 50}, h265: {s32FirstFrameStartQp: 0, u32StepQp: 48, u32MinQp: 48, u32MaxQp: 51, u32MinIQp: 48, u32MaxIQp: 51, s32DeltIpQp: 7, s32MaxReEncodeTimes: 2, u32FrmMaxQp: 51, u32FrmMinQp: 48, u32FrmMinIQp: 51, u32FrmMaxIQp: 48, u32MotionStaticSwitchFrmQp: 50}}}",
+                        seq
+                    );
+                }
+                else if (strcmp("set_video_rc", method) == 0)
+                {
+                    if (seq > 0)
+                    {
+                        write_json(ctrl_client_fd, "{seq: %d}", seq);
+                    }
+                }
+                else
+                {
+                    if (seq > 0)
+                    {
+                        write_json_error(ctrl_client_fd, seq, "unknown method");
+                    }
+                }
                 free(method);
             }
         }

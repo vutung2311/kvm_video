@@ -16,41 +16,46 @@ RK_APP_LDFLAGS = -L $(RK_APP_MEDIA_LIBS_PATH) -lpthread -lrockit -lrockchip_mpp 
 CC = $(RK_APP_CROSS)-gcc
 CXX = $(RK_APP_CROSS)-g++
 
-CFLAGS = -I $(RK_MEDIA_INCLUDE_PATH) -I $(RK_MEDIA_INCLUDE_PATH)/libdrm
-CFLAGS += -Wno-int-conversion -Wno-implicit-function-declaration -Wno-discarded-qualifiers
-CXXFLAGS = $(CFLAGS) -I $(CURRENT_DIR)/luckfox_pico_yolov5/include -DRV1106_1103
-LDFLAGS ?=  -L $(RK_APP_MEDIA_LIBS_PATH) -lpthread -lrockit -lrockchip_mpp -lrga -lm -g -O0 -L $(CURRENT_DIR)/lib -lrknnmrt
+INCLUDES = -I $(CURRENT_DIR) -I $(CURRENT_DIR)/npu/include -I $(CURRENT_DIR)/osd -I $(CURRENT_DIR)/include/rknn -I $(CURRENT_DIR)/include/opencv4 -I $(CURRENT_DIR)/librga/include -I $(CURRENT_DIR)/librga/samples/utils/allocator/include -I $(RK_MEDIA_INCLUDE_PATH) -I $(RK_MEDIA_INCLUDE_PATH)/libdrm
+CFLAGS = $(INCLUDES) -Wno-int-conversion -Wno-implicit-function-declaration -Wno-discarded-qualifiers
+CXXFLAGS = $(INCLUDES) -DRV1106_1103
+LDFLAGS ?=  -L $(RK_APP_MEDIA_LIBS_PATH) -lpthread -lrockit -lrockchip_mpp -lrga -lm -g -O2 -L $(CURRENT_DIR)/lib -lrknnmrt
 BIN 	= kvm_video
 
 #Collect the files to compile
 MAINSRC = $(wildcard ./*.c) 
-CXXSRC = luckfox_pico_yolov5/src/yolov5.cc luckfox_pico_yolov5/src/postprocess.cc luckfox_pico_yolov5/src/yolo_c_api.cc
+CSRCS   = osd/overlay.c npu/src/preprocess.c
+CPPSRC  = librga/samples/utils/allocator/dma_alloc.cpp
+CXXSRC  = npu/src/yolov5.cc npu/src/postprocess.cc npu/src/yolo_c_api.cc
 BUILD_DIR 		= ./build
 BUILD_OBJ_DIR 	= $(BUILD_DIR)/obj
 BUILD_BIN_DIR 	= $(BUILD_DIR)/bin
 
 OBJEXT 			?= .o
 
-AOBJS 			= $(ASRCS:.S=$(OBJEXT))
 COBJS 			= $(CSRCS:.c=$(OBJEXT))
-
+CPPOBJ 			= $(CPPSRC:.cpp=$(OBJEXT))
 MAINOBJ 		= $(MAINSRC:.c=$(OBJEXT))
 CXXOBJ			= $(CXXSRC:.cc=$(OBJEXT))
 
-SRCS 			= $(ASRCS) $(CSRCS) $(MAINSRC)
-OBJS 			= $(AOBJS) $(COBJS) $(MAINOBJ) $(CXXOBJ)
+OBJS 			= $(MAINOBJ) $(COBJS) $(CPPOBJ) $(CXXOBJ)
 TARGET 			= $(addprefix $(BUILD_OBJ_DIR)/, $(patsubst ./%, %, $(OBJS)))
 
 all: default
 
 $(BUILD_OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	@$(CC)  $(CFLAGS) -c $< -o $@ -g -O0
+	@$(CC)  $(CFLAGS) -c $< -o $@ -g -O2
+	@echo "CC $<"
+
+$(BUILD_OBJ_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	@$(CC)  $(CFLAGS) -x c -c $< -o $@ -g -O2
 	@echo "CC $<"
 
 $(BUILD_OBJ_DIR)/%.o: %.cc
 	@mkdir -p $(dir $@)
-	@$(CXX)  $(CXXFLAGS) -c $< -o $@ -g -O0
+	@$(CXX)  $(CXXFLAGS) -c $< -o $@ -g -O2
 	@echo "CXX $<"
 default: $(TARGET)
 	@mkdir -p $(dir $(BUILD_BIN_DIR)/)

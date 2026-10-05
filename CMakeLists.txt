@@ -45,7 +45,7 @@ target_include_directories(kvm_video PRIVATE
 target_compile_options(kvm_video PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wno-int-conversion -Wno-implicit-function-declaration -Wno-discarded-qualifiers>
   -g
-  -O0
+  -O2
 )
 
 target_link_directories(kvm_video PRIVATE
