@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     }
     printf("video system inited\n");
 
-    video_start_streaming();
+    // Streaming starts on-demand when first client connects via ctrl socket
     while (running)
     {
         // TODO: use pthread primitives
